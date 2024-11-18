@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graph Coloring Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    canvas { border: 1px solid black; margin-top: 20px; }
+    .color-palette {
+      margin: 10px;
+      display: flex;
+      justify-content: center;
+    }
+    .color-box {
+      width: 30px;
+      height: 30px;
+      margin: 5px;
+      cursor: pointer;
+      border: 1px solid black;
+    }
+  </style>
+</head>
+<body>
+  <h1>Graph Coloring</h1>
+  <p>Click on vertices to create a graph. Then, color them using the palette.</p>
+  <canvas id="graphCanvas" width="600" height="400"></canvas>
+
+  <div class="color-palette">
+    <div class="color-box" style="background-color: red;" onclick="setColor('red')"></div>
+    <div class="color-box" style="background-color: green;" onclick="setColor('green')"></div>
+    <div class="color-box" style="background-color: blue;" onclick="setColor('blue')"></div>
+    <div class="color-box" style="background-color: yellow;" onclick="setColor('yellow')"></div>
+  </div>
+
+  <button onclick="checkGraphColoring()">Check Graph Coloring</button>
+  <p id="result"></p>
+
+  <script>
+    const canvas = document.getElementById("graphCanvas");
+    const ctx = canvas.getContext("2d");
+    const vertices = [];
+    const edges = [];
+    let currentColor = null;
+
+    // Draw graph
+    function drawGraph() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < vertices.length; i++) {
+        const v = vertices[i];
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, 20, 0, Math.PI * 2);
+        ctx.fillStyle = v.color || "lightblue";
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "black";
+        ctx.fillText(v.id, v.x - 5, v.y + 5);
+      }
+      for (const edge of edges) {
+        ctx.beginPath();
+        ctx.moveTo(edge.start.x, edge.start.y);
+        ctx.lineTo(edge.end.x, edge.end.y);
+        ctx.stroke();
+      }
+    }
+
+    // Add vertex
+    canvas.addEventListener("click", (e) => {
+      const x = e.offsetX;
+      const y = e.offsetY;
+      const id = vertices.length;
+      vertices.push({ x, y, id });
+      drawGraph();
+    });
+
+    // Add edge
+    canvas.addEventListener("dblclick", (e) => {
+      const x = e.offsetX;
+      const y = e.offsetY;
+      const closestVertex = vertices.reduce((prev, curr) => {
+        const prevDist = Math.hypot(prev.x - x, prev.y - y);
+        const currDist = Math.hypot(curr.x - x, curr.y - y);
+        return prevDist < currDist ? prev : curr;
+      });
+      if (edges.length > 0 && edges[edges.length - 1].start === closestVertex) return;
+      if (edges.length > 0) {
+        edges[edges.length - 1].end = closestVertex;
+        drawGraph();
+        return;
+      }
+      const edgeStart = closestVertex;
+      edges.push({ start: edgeStart, end: edgeStart });
+      drawGraph();
+    });
+
+    // Set color
+    function setColor(color) {
+      currentColor = color;
+    }
+
+    // Color a vertex
+    canvas.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      if (currentColor) {
+        const x = e.offsetX;
+        const y = e.offsetY;
+        const closestVertex = vertices.reduce((prev, curr) => {
+          const prevDist = Math.hypot(prev.x - x, prev.y - y);
+          const currDist = Math.hypot(curr.x - x, curr.y - y);
+          return prevDist < currDist ? prev : curr;
+        });
+        closestVertex.color = currentColor;
+        drawGraph();
+      }
+    });
+
+    // Check if graph coloring is valid
+    function checkGraphColoring() {
+      let isValid = true;
+      for (const edge of edges) {
+        if (edge.start.color === edge.end.color) {
+          isValid = false;
+          break;
+        }
+      }
+      document.getElementById("result").innerText = isValid ? "Valid Coloring!" : "Invalid Coloring!";
+    }
+
+    // Initialize
+    drawGraph();
+  </script>
+</body>
+</html>
