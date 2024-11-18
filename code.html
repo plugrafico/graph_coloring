@@ -23,58 +23,68 @@
 </head>
 <body>
   <h1>Graph Coloring</h1>
-  <p>Click on vertices to create a graph. Then, color them using the palette.</p>
+  <p>Click on each node to cycle through colors. The goal is to color the nodes such that no two adjacent nodes share the same color.</p>
   <canvas id="graphCanvas" width="600" height="400"></canvas>
 
-  <div class="color-palette">
-    <div class="color-box" style="background-color: red;" onclick="setColor('red')"></div>
-    <div class="color-box" style="background-color: green;" onclick="setColor('green')"></div>
-    <div class="color-box" style="background-color: blue;" onclick="setColor('blue')"></div>
-    <div class="color-box" style="background-color: yellow;" onclick="setColor('yellow')"></div>
-  </div>
-
-  <button onclick="checkGraphColoring()">Check Graph Coloring</button>
   <p id="result"></p>
 
   <script>
     const canvas = document.getElementById("graphCanvas");
     const ctx = canvas.getContext("2d");
+    const maxColors = 12; // Maximum colors allowed
     const vertices = [];
     const edges = [];
-    let currentColor = null;
 
-    // Draw graph
+    // Randomly generate a graph with vertices and edges
+    const numVertices = 6; // You can adjust the number of vertices
+    const numEdges = 8; // You can adjust the number of edges
+
+    // Randomize the creation of vertices and edges
+    function generateRandomGraph() {
+      // Create random vertices
+      for (let i = 0; i < numVertices; i++) {
+        vertices.push({ x: Math.random() * 500 + 50, y: Math.random() * 300 + 50, id: i, color: null });
+      }
+
+      // Create random edges (no self-loops, no duplicate edges)
+      for (let i = 0; i < numEdges; i++) {
+        const v1 = Math.floor(Math.random() * numVertices);
+        const v2 = Math.floor(Math.random() * numVertices);
+        if (v1 !== v2 && !edges.some(e => (e.start === v1 && e.end === v2) || (e.start === v2 && e.end === v1))) {
+          edges.push({ start: v1, end: v2 });
+        }
+      }
+      drawGraph();
+    }
+
+    // Draw the graph on the canvas
     function drawGraph() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Draw edges
+      for (const edge of edges) {
+        const v1 = vertices[edge.start];
+        const v2 = vertices[edge.end];
+        ctx.beginPath();
+        ctx.moveTo(v1.x, v1.y);
+        ctx.lineTo(v2.x, v2.y);
+        ctx.stroke();
+      }
+
+      // Draw vertices
       for (let i = 0; i < vertices.length; i++) {
         const v = vertices[i];
         ctx.beginPath();
         ctx.arc(v.x, v.y, 20, 0, Math.PI * 2);
-        ctx.fillStyle = v.color || "lightblue";
+        ctx.fillStyle = v.color || "lightgray"; // Default color is gray if not assigned
         ctx.fill();
         ctx.stroke();
         ctx.fillStyle = "black";
         ctx.fillText(v.id, v.x - 5, v.y + 5);
       }
-      for (const edge of edges) {
-        ctx.beginPath();
-        ctx.moveTo(edge.start.x, edge.start.y);
-        ctx.lineTo(edge.end.x, edge.end.y);
-        ctx.stroke();
-      }
     }
 
-    // Add vertex
+    // Click on a vertex to cycle through colors
     canvas.addEventListener("click", (e) => {
-      const x = e.offsetX;
-      const y = e.offsetY;
-      const id = vertices.length;
-      vertices.push({ x, y, id });
-      drawGraph();
-    });
-
-    // Add edge
-    canvas.addEventListener("dblclick", (e) => {
       const x = e.offsetX;
       const y = e.offsetY;
       const closestVertex = vertices.reduce((prev, curr) => {
@@ -82,52 +92,48 @@
         const currDist = Math.hypot(curr.x - x, curr.y - y);
         return prevDist < currDist ? prev : curr;
       });
-      if (edges.length > 0 && edges[edges.length - 1].start === closestVertex) return;
-      if (edges.length > 0) {
-        edges[edges.length - 1].end = closestVertex;
-        drawGraph();
-        return;
-      }
-      const edgeStart = closestVertex;
-      edges.push({ start: edgeStart, end: edgeStart });
+
+      // Cycle through colors
+      const currentColor = closestVertex.color || "lightgray";
+      const nextColor = getNextColor(currentColor);
+      closestVertex.color = nextColor;
+
+      // Redraw the graph after coloring
       drawGraph();
+      checkGraphColoring();
     });
 
-    // Set color
-    function setColor(color) {
-      currentColor = color;
+    // Get the next color in the cycle
+    function getNextColor(currentColor) {
+      const colorPalette = [
+        "red", "green", "blue", "yellow", "orange", "purple", "pink", "brown", "cyan", "magenta", "lime", "indigo"
+      ];
+      let colorIndex = colorPalette.indexOf(currentColor);
+      if (colorIndex === -1) {
+        colorIndex = 0; // If no color, start from first color
+      }
+      return colorPalette[(colorIndex + 1) % maxColors];
     }
 
-    // Color a vertex
-    canvas.addEventListener("contextmenu", (e) => {
-      e.preventDefault();
-      if (currentColor) {
-        const x = e.offsetX;
-        const y = e.offsetY;
-        const closestVertex = vertices.reduce((prev, curr) => {
-          const prevDist = Math.hypot(prev.x - x, prev.y - y);
-          const currDist = Math.hypot(curr.x - x, curr.y - y);
-          return prevDist < currDist ? prev : curr;
-        });
-        closestVertex.color = currentColor;
-        drawGraph();
-      }
-    });
-
-    // Check if graph coloring is valid
+    // Check if the graph coloring is valid (no adjacent vertices have the same color)
     function checkGraphColoring() {
       let isValid = true;
       for (const edge of edges) {
-        if (edge.start.color === edge.end.color) {
+        const v1 = vertices[edge.start];
+        const v2 = vertices[edge.end];
+        if (v1.color && v2.color && v1.color === v2.color) {
           isValid = false;
           break;
         }
       }
-      document.getElementById("result").innerText = isValid ? "Valid Coloring!" : "Invalid Coloring!";
+
+      // Show result
+      const resultText = isValid ? "Valid Coloring!" : "Invalid Coloring!";
+      document.getElementById("result").innerText = resultText;
     }
 
-    // Initialize
-    drawGraph();
+    // Initialize the graph
+    generateRandomGraph();
   </script>
 </body>
 </html>
